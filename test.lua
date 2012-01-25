@@ -23,3 +23,4 @@ kk.value=100
 print(kk.value)
 kk.miss=1337
 print(kk.count)
+testinsane(kk)

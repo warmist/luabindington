@@ -42,7 +42,7 @@
 			<Add library="lua5.1" />
 			<Add directory="$(#lua.lib)" />
 		</Linker>
-		<Unit filename="include\binder.hpp" />
+		<Unit filename="include\luabindington.hpp" />
 		<Unit filename="include\luabindington\function.h" />
 		<Unit filename="include\luabindington\util.h" />
 		<Unit filename="include\luastuff.h" />

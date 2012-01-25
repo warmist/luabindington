@@ -11,7 +11,7 @@
 #include <map>
 #include "luabindington/util.h"
 #include "luabindington/function.h"
-//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file, make huge test suite, auto pointers when pulling obj from lua.
+//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file, make huge test suite
 //TODO: fix includes.
 //BUGS: registry as weak values
 //typecasting:
@@ -86,8 +86,8 @@ struct lua_object
     }
     static int GetTable(lua_State *L,T* p)
     {
-        std::cout<<"GETTABLE\n";
-        lua::StackDump(L);
+        //std::cout<<"GETTABLE\n";
+        //lua::StackDump(L);
         lua::state s(L);
         s.getglobal(_name);
         s.gettable(LUA_REGISTRYINDEX);
@@ -97,7 +97,7 @@ struct lua_object
         if(s.is<lua::table>())
         {
             s.remove(-2);
-            lua::StackDump(L);
+            //lua::StackDump(L);
             return 1;
         }
         else //table does not exist, not created in lua..., create userdata, and push it to registry, then return it.
@@ -106,7 +106,7 @@ struct lua_object
             s.getglobal(_name);
             lua_udata *udata=(lua_udata*)s.newuserdata(sizeof(lua_udata));
             udata->ptr=p;
-            lua::StackDump(L);
+            //lua::StackDump(L);
             PushUData(s,udata);//TODO return userdata, not table, could return table...
             s.pop(2);
 
@@ -115,13 +115,13 @@ struct lua_object
             s.push<unsigned int>(reinterpret_cast<unsigned int>(p));
             s.gettable();
             s.remove(-2);
-            lua::StackDump(L);
+            //lua::StackDump(L);
             return 1;
         }
     }
     static int NewObject(lua_State *L)
     {
-        std::cout<<"New object\n";
+        //std::cout<<"New object\n";
         lua::state s(L);
         //LogLua(s);
         lua_udata *p=(lua_udata*)s.newuserdata(sizeof(lua_udata));
@@ -138,7 +138,7 @@ struct lua_object
     }
     static int lua_Index(lua_State *L)// 1: userdata,2:key
     {
-        std::cout<<"INDEX\n";
+        //std::cout<<"INDEX\n";
         lua::state s(L);
         T* ptr=GetPointer(s,1);
         if(s.is<string>(2))
@@ -158,7 +158,7 @@ struct lua_object
             s.pop(2);
             GetTable(L,ptr);
             s.pushvalue(2);
-            lua::StackDump(L);
+            //lua::StackDump(L);
             s.gettable();
             return 1;
         }
@@ -166,7 +166,7 @@ struct lua_object
     }
     static int lua_NewIndex(lua_State *L)
     {
-        std::cout<<"NEWINDEX\n";
+       // std::cout<<"NEWINDEX\n";
         //1-userdata,2-key,3-value
         lua::state s(L);
         T* ptr=GetPointer(s,1);

@@ -1,7 +1,7 @@
 #ifndef LUABINDINGTON_UTIL_H_INCLUDED
 #define LUABINDINGTON_UTIL_H_INCLUDED
 
-template<typename T,bool is_class_type=std::is_class<T>::value >
+template<typename T,bool is_class_type=(std::is_class<typename std::remove_pointer<T>::type>::value  and std::is_class<T>::value) >
 struct class_has_pullfromlua_function:
     std::false_type
 {};
@@ -19,6 +19,38 @@ struct class_has_pullfromlua_function<T,true>
     static const bool value=sizeof(has_matching_member<T>(0))==sizeof(char);
 };
 
+template<typename T,bool is_class_type=(std::is_class<typename std::remove_pointer<T>::type>::value  and !std::is_class<T>::value)>
+struct class_has_pullfromlua_ptr_function:
+    std::false_type
+{};
+
+template<typename T>
+struct class_has_pullfromlua_ptr_function<T,true>
+{
+    template<T (*)(lua::state &,int &)> struct tester;
+
+    template<typename U>
+    static char has_matching_member(tester<&std::remove_pointer<U>::type::pullfromlua>*); // A
+    template<typename U>
+    static long has_matching_member(...); // B
+
+    static const bool value=sizeof(has_matching_member<T>(0))==sizeof(char);
+};
+template <class T>
+struct has_pullfromlua:
+    std::integral_constant<bool,
+
+        (class_has_pullfromlua_ptr_function<T>::value ||
+        class_has_pullfromlua_function<T>::value)>
+{};
+
+template <class T>
+typename std::enable_if<class_has_pullfromlua_ptr_function<T>::value,T>::type
+convert_from_lua_impl(lua::state &s,int &stacknum)
+{
+    T v=std::remove_pointer<T>::type::pullfromlua(s,stacknum);
+    return v;
+}
 template <class T>
 typename std::enable_if<class_has_pullfromlua_function<T>::value,T>::type
 convert_from_lua_impl(lua::state &s,int &stacknum)
@@ -28,7 +60,7 @@ convert_from_lua_impl(lua::state &s,int &stacknum)
 }
 
 template <class T>
-typename std::enable_if<!class_has_pullfromlua_function<T>::value,T>::type
+typename std::enable_if<!has_pullfromlua<T>::value && !std::is_pointer<T>::value,T>::type
 convert_from_lua_impl(lua::state &s,int &stacknum)
 {
     T v=s.as<T>(stacknum);

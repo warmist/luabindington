@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include <binder.hpp>
+#include <luabindington.hpp>
 using namespace std;
 /*class someclassname:public otherclass
 {
@@ -112,14 +112,21 @@ public:
         LUA_SET(varvar,"miss");
     LUA_END_WRAP();
 };
-/* TODO special case for pointers
+// TODO special case for pointers
 void insane_test(otherthing* p)
 {
     std::cout<<"insane start.\n";
     p->DoSth(100);
     std::cout<<"insane end.\n";
 }
-*/
+template<typename T>
+void TestTypes()
+{
+    cout<<typeid(T).name()<<" is class:"<<std::is_class<T>::value;
+    cout<<" Has any:"<<has_pullfromlua<T>::value<<" has normal:"<<class_has_pullfromlua_function<T>::value;
+    cout<<" is classremoved:"<<std::is_class<typename std::remove_pointer<T>::type>::value;
+    cout<<" has ptr:"<<class_has_pullfromlua_ptr_function<T>::value<<"\n";
+}
 int main()
 {
     lua_property<otherthing,int,true,true> prop();
@@ -138,10 +145,12 @@ int main()
 
     otherthing::mywrap::Register(state,"thingy");
 
-    //lua_function<void,otherthing*> ge1(insane_test,"testinsane");
-    //ge1.Register(state);
-
-    //cout<<"Int:"<<class_has_pullfromlua_function<int>::value<<" pair:"<<class_has_pullfromlua_function<mypair>::value<<"\n";
+    lua_function<void,otherthing*> ge1(insane_test,"testinsane");
+    ge1.Register(state);
+    TestTypes<int>();
+    TestTypes<mypair>();
+    TestTypes<otherthing>();
+    TestTypes<otherthing*>();
     state.loadfile("test.lua");
     try{
         state.pcall();
