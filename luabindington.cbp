@@ -30,10 +30,27 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-std=c++0x" />
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
+			<Add directory="$(#lua.include)" />
+			<Add directory="$(#boost)" />
+			<Add directory="include" />
 		</Compiler>
+		<Linker>
+			<Add library="lua51" />
+			<Add library="lua5.1" />
+			<Add directory="$(#lua.lib)" />
+		</Linker>
+		<Unit filename="include\binder.hpp" />
+		<Unit filename="include\luabindington\function.h" />
+		<Unit filename="include\luabindington\util.h" />
+		<Unit filename="include\luastuff.h" />
+		<Unit filename="include\luaxx\luaxx.hpp" />
+		<Unit filename="include\unpack.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="src\luastuff.cpp" />
+		<Unit filename="src\luaxx\luaxx.cc" />
 		<Extensions>
 			<code_completion />
 			<envvars />
