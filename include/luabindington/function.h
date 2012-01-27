@@ -111,13 +111,16 @@ public:
     {
 
     }
-    void Register(lua_State *L)
+    void Register(lua_State *L) //ok
     {
+        //std::cout<<"MemberFunct register\n";
         lua::state s(L);
+        //lua::StackDump(L);
         lua_hold *p=(lua_hold*)s.newuserdata(sizeof(lua_hold));
         p->fptr=f;
         lua_pushcclosure(L,&call,1);
         s.setfield(name);
+        //lua::StackDump(L);
     }
     static int call(lua_State *L)
     {
@@ -136,11 +139,11 @@ public:
         lua_hold *t_hold;
         s.touserdata(t_hold,lua_upvalueindex(1));
         int stacknum=2;
-        T* obj_ptr;
+        typename T::mywrap::lua_udata* obj_ptr;
 
         s.touserdata(obj_ptr,1);
         lua_to_tuple<myargs,0,Args...>(args,s,stacknum);
-        myret r=applyTuple<T,myret,Args...>(obj_ptr,t_hold->fptr,args);
+        myret r=applyTuple<T,myret,Args...>(obj_ptr->ptr,t_hold->fptr,args);
         return convert_to_lua(r,s);
         //f(args...);
     }
@@ -190,11 +193,11 @@ public:
         lua_hold *t_hold;
         s.touserdata(t_hold,lua_upvalueindex(1));
         int stacknum=2;
-        T* obj_ptr;
+        typename T::mywrap::lua_udata* obj_ptr;
 
         s.touserdata(obj_ptr,1);
         lua_to_tuple<myargs,0,Args...>(args,s,stacknum);
-        applyTuple<T,myret,Args...>(obj_ptr,t_hold->fptr,args);
+        applyTuple<T,myret,Args...>(obj_ptr->ptr,t_hold->fptr,args);
         return 0;
         //f(args...);
     }

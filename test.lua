@@ -1,8 +1,19 @@
-function PrintTable(tbl)
-	for k,v in pairs(tbl) do 
-		print(tostring(k)..'->'..tostring(v)) 
-	end 
-end
+--[=[
+	things to test:
+	void function(args)
+	rettype function(args)
+	
+	struct cast to/from lua :(as arg in c function or as a return value of c function)
+	
+	object:
+		void/rettype mem_function(args)
+		cast to ptr from c++: state.pcall/call(1) , with before mywrap::GetTable(state,this)
+		cast from ptr  from lua: somefunc(object)
+		property get/set
+		
+	
+	
+--]=]
 function printValue(obj)
 	print("printing value:"..obj:DoSth(1))
 end

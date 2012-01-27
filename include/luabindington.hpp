@@ -11,7 +11,7 @@
 #include <map>
 #include "luabindington/util.h"
 #include "luabindington/function.h"
-//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file, make huge test suite
+//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file, make huge test suite,type checking (possibly casting)
 //TODO: fix includes.
 //BUGS: registry as weak values
 //typecasting:
@@ -84,14 +84,15 @@ struct lua_object
         //lua::StackDump(s);
         return 1;
     }
-    static int GetTable(lua_State *L,T* p)
+    static int GetTable(lua_State *L,T* p) //BUG HERE
     {
-        //std::cout<<"GETTABLE\n";
-        //lua::StackDump(L);
+        std::cout<<"GETTABLE w name="<<_name<<" and p="<<p<<"\n";
+        lua::StackDump(L);
         lua::state s(L);
         s.getglobal(_name);
         s.gettable(LUA_REGISTRYINDEX);
         s.push<unsigned int>(reinterpret_cast<unsigned int>(p));
+        lua::StackDump(L);
         //s.pushlightuserdata(p);
         s.gettable();
         if(s.is<lua::table>())
@@ -102,11 +103,12 @@ struct lua_object
         }
         else //table does not exist, not created in lua..., create userdata, and push it to registry, then return it.
         {
+            std::cout<<"Table does not exist, creating new...\n";
             s.pop(2);
             s.getglobal(_name);
             lua_udata *udata=(lua_udata*)s.newuserdata(sizeof(lua_udata));
             udata->ptr=p;
-            //lua::StackDump(L);
+            lua::StackDump(L);
             PushUData(s,udata);//TODO return userdata, not table, could return table...
             s.pop(2);
 
@@ -187,7 +189,8 @@ struct lua_object
     static void Register(lua::state &s,string name)
     {
         _name=name;
-        s.newtable();
+        s.newtable(); //metatable.
+
         int myself=s.gettop();
         if(functions.size()==0)
         {
@@ -195,12 +198,15 @@ struct lua_object
         }
         s.push(name);
         s.setfield("name");
+
         lua_pushcclosure(s,&NewObject,0);
         s.setfield("new");
+
         for(auto* i:functions)
         {
             i->Register(s);
         }
+
         lua_pushcfunction(s,&lua_Index);
         s.setfield("__index");
 
@@ -209,7 +215,9 @@ struct lua_object
 
         s.pushvalue(myself);
         s.newtable();
+        lua::StackDump(s);
         s.settable(LUA_REGISTRYINDEX);
+        lua::StackDump(s);
         s.setglobal(name);
     }
 };
@@ -223,7 +231,7 @@ template <typename T>
  string lua_object<T>::_name;
 #define LUA_WRAP(type)typedef lua_object<type> mywrap;\
     static type* pullfromlua(lua::state &s,int &start){ start++;return type::mywrap::GetPointer(s,start-1);}\
-    int pushtolua(lua::state &s){ type::mywrap::GetTable(s,this);s.getfield("__udata");s.remove(-2);return 1;}\
+    int pushtolua(lua::state &s){ type::mywrap::GetTable(s,this);s.getfield("__udata");lua::StackDump(s);s.remove(-2);return 1;}\
     static void addfunctions(){\
 
 #define LUA_FUNC mywrap::AddFunction
@@ -245,7 +253,6 @@ struct lua_state_dummy
         return 1; //TODO think about this, that is programmer must do GetTable(this)... Must be a way to automate this
     }
 };
-
 template <typename T,typename membertype,bool hasget,bool hasset>
 struct lua_property
 {

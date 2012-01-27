@@ -101,6 +101,10 @@ public:
     {
         s.s.loadstring("print('out of lua in lua')");
         s.s.pcall();
+        s.s.getglobal("printvalue");
+        mywrap::GetTable(s.s,this);
+        pushtolua(s.s);
+        s.s.pcall(1);
     }
 //// Wrapper
     LUA_WRAP(otherthing)
@@ -131,6 +135,8 @@ int main()
 {
     lua_property<otherthing,int,true,true> prop();
     lua::state state=lua::glua::Get();
+    state.loadfile("util.lua");
+    state.pcall();
     lua_function<mypair,int,double> s(sum,"sum");
     s.Register(state);
 
