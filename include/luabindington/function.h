@@ -19,6 +19,10 @@ public:
     {
 
     }
+    lua_function(myfunc f,std::string name,lua_State *L):f(f),name(name)
+    {
+        Register(L);
+    }
     void Register(lua_State *L)
     {
         lua::state s(L);
@@ -60,6 +64,10 @@ public:
     lua_function(myfunc f,std::string name):f(f),name(name)
     {
 
+    }
+    lua_function(myfunc f,std::string name,lua_State *L):f(f),name(name)
+    {
+        Register(L);
     }
     void Register(lua_State *L)
     {
@@ -202,5 +210,4 @@ public:
         //f(args...);
     }
 };
-
 #endif // LUABINDINGTON_FUNCTION_H_INCLUDED

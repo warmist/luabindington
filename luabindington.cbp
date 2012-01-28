@@ -10,7 +10,7 @@
 				<Option output="bin\Debug\luabindington" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj\Debug\" />
 				<Option type="1" />
-				<Option compiler="tdm_gcc_compiler" />
+				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-std=c++0x" />
 					<Add option="-g" />
@@ -42,15 +42,19 @@
 			<Add library="lua5.1" />
 			<Add directory="$(#lua.lib)" />
 		</Linker>
+		<Unit filename="include\function_test.h" />
 		<Unit filename="include\luabindington.hpp" />
 		<Unit filename="include\luabindington\function.h" />
 		<Unit filename="include\luabindington\util.h" />
 		<Unit filename="include\luastuff.h" />
 		<Unit filename="include\luaxx\luaxx.hpp" />
+		<Unit filename="include\struct_test.h" />
 		<Unit filename="include\unpack.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="src\function_test.cpp" />
 		<Unit filename="src\luastuff.cpp" />
 		<Unit filename="src\luaxx\luaxx.cc" />
+		<Unit filename="src\struct_test.cpp" />
 		<Extensions>
 			<code_completion />
 			<envvars />

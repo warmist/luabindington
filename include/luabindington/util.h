@@ -90,6 +90,8 @@ void lua_to_tuple(t_type &mtuple,lua::state &s,int &stacknum)
         std::stringstream err;
         err<<e.what();
         err<<" at:"<<num<<" argument.";
+
+        s.traceback();
         throw lua::bad_conversion(err.str().c_str());
     }
     //stacknum++;

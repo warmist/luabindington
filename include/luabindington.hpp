@@ -26,10 +26,7 @@
 */
 
 
-void LogLua(lua::state &s)
-{
-    std::cout<<"Top:"<<s.gettop()<<"\n";
-}
+
 template <typename T,typename F>
 T unioncast(F v)
 {

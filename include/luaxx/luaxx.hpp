@@ -253,6 +253,8 @@ namespace lua
 
          size_t objlen(int index = -1);
 
+         std::string gettype(int i=-1);
+         void traceback();
       private:
          lua_State* L;
          bool managed;

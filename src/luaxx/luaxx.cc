@@ -819,6 +819,20 @@ namespace lua
    bool state::is<lightuserdata>(int index) {
       return lua_islightuserdata(L, index);
    }
-
+   std::string state::gettype(int i)
+   {
+        return lua_typename(L,lua_type(L,i));
+   }
+   void state::traceback()
+   {
+       lua_Debug dbg;
+       int i=0;
+       while(lua_getstack(L,i,&dbg))
+       {
+           lua_getinfo(L,"Sl",&dbg);
+           std::cout<<i<<" "<<dbg.short_src<<":"<<dbg.currentline<<"\n";
+           i++;
+       }
+   }
 }
 

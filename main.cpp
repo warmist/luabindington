@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <luabindington.hpp>
+#include "function_test.h"
+#include "struct_test.h"
 using namespace std;
 /*class someclassname:public otherclass
 {
@@ -133,11 +135,13 @@ void TestTypes()
 }
 int main()
 {
-    lua_property<otherthing,int,true,true> prop();
+
     lua::state state=lua::glua::Get();
     state.loadfile("util.lua");
     state.pcall();
-    lua_function<mypair,int,double> s(sum,"sum");
+    do_func_test();
+    do_struct_test();
+    /*lua_function<mypair,int,double> s(sum,"sum");
     s.Register(state);
 
     lua_function<double,string> e(exp,"exp");
@@ -171,6 +175,6 @@ int main()
     state.pcall(1);
     //state.loadstring("testinsane(kk)");
     //state.pcall();
-    cout << "Hello world!" << endl;
+    cout << "Hello world!" << endl;*/
     return 0;
 }

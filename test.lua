@@ -4,6 +4,7 @@
 	rettype function(args)
 	
 	struct cast to/from lua :(as arg in c function or as a return value of c function)
+	complex structs (struct in struct)
 	
 	object:
 		void/rettype mem_function(args)
