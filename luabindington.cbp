@@ -39,6 +39,7 @@
 			<Add directory="include" />
 		</Compiler>
 		<Linker>
+			<Add option="-static-libstdc++ -static-libgcc" />
 			<Add library="lua51" />
 			<Add library="lua5.1" />
 			<Add directory="$(#lua.lib)" />
@@ -49,12 +50,14 @@
 		<Unit filename="include\luabindington\util.h" />
 		<Unit filename="include\luastuff.h" />
 		<Unit filename="include\luaxx\luaxx.hpp" />
+		<Unit filename="include\object_test.h" />
 		<Unit filename="include\struct_test.h" />
 		<Unit filename="include\unpack.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="src\function_test.cpp" />
 		<Unit filename="src\luastuff.cpp" />
 		<Unit filename="src\luaxx\luaxx.cc" />
+		<Unit filename="src\object_test.cpp" />
 		<Unit filename="src\struct_test.cpp" />
 		<Extensions>
 			<code_completion />

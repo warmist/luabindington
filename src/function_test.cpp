@@ -32,7 +32,7 @@ void do_func_test()
     try{
         state.pcall(0,0,-2);
     }
-    catch(std::exception &e)
+    catch(lua::exception &e)
     {
         std::cout<<"IN C:"<<e.what()<<"\n";
     }
