@@ -199,9 +199,9 @@ struct lua_object
         lua_pushcclosure(s,&NewObject,0);
         s.setfield("new");
 
-        for(auto* i:functions)
+        for(lua_f_vec::iterator i=functions.begin();i!=functions.end();i++)
         {
-            i->Register(s);
+            (*i)->Register(s);
         }
 
         lua_pushcfunction(s,&lua_Index);
@@ -233,7 +233,7 @@ template <typename T>
 
 #define LUA_FUNC mywrap::AddFunction
 #define LUA_GET(var,name) mywrap::getters[name]=[](mywrap::mytype *t,lua::state &s){ return convert_to_lua(t->var,s); }
-#define LUA_SET(var,name) mywrap::setters[name]=[](mywrap::mytype *t,lua::state &s){ int dum=3;t->var=convert_from_lua<decltype(var)>(s,dum);return 0;}
+#define LUA_SET(var,name) mywrap::setters[name]=[](mywrap::mytype *t,lua::state &s){ int dum=3;t->var=convert_from_lua<decltype(t->var)>(s,dum);return 0;}
 #define LUA_END_WRAP() }
 struct lua_state_dummy
 {

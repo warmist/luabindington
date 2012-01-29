@@ -23,6 +23,7 @@
 				<Option compiler="tdm_gcc_compiler" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-std=c++0x" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
