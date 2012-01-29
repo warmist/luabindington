@@ -20,11 +20,20 @@ public:
         _a=a*2;
         return a+_a/2;
     }
+    void GC()
+    {
+        std::cout<<"IN first_class gc:"<<this<<"\n";
+        delete this;
+    }
     LUA_WRAP(first_class)
     LUA_FUNC<void,int>(&first_class::void_funct,"void_funct");
     LUA_FUNC<int,int>(&first_class::int_funct,"int_funct");
     LUA_GET(_a,"_a");
     LUA_SET(_a,"_a_set");
+    //LUA_FUNC<void>(&first_class::GC,"__gc");
+    LUA_GC(&first_class::GC);
+    //LUA_STATIC<void,first_class*>(&first_class::GC,"__gc");
+    //lua_function<void,first_class*>(&first_class::GC,"__gc");
     LUA_END_WRAP()
 };
 void funct_that_takes_obj(first_class *ptr)

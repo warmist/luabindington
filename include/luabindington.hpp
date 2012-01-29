@@ -11,9 +11,8 @@
 #include <map>
 #include "luabindington/util.h"
 #include "luabindington/function.h"
-//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file, make huge test suite,type checking (possibly casting)
+//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file,type checking (possibly casting)
 //TODO: fix includes.
-//BUGS: registry as weak values
 //typecasting:
 //1.add parent to registry table (multiple parents ok?)
 //2.add auto index casting e.g.
@@ -58,7 +57,7 @@ struct lua_object
     {
         functions.push_back(new lua_function_member<T,RetType,args...>(fptr,name));
     }
-    static int PushUData(lua::state &s,lua_udata *p) //table(metable info), udata
+    static int PushUData(lua::state &s,lua_udata *p) //table(metable info), udata TODO __gc does not work for some reason.
     {
         //LogLua(s);
         std::cout<<"PUSHUDATA\n";
@@ -72,10 +71,21 @@ struct lua_object
         s.gettable(LUA_REGISTRYINDEX); //registry[T][ptr]=newtable
         //s.pushlightuserdata(p->ptr);
         s.push<unsigned int>(reinterpret_cast<unsigned int>(p->ptr));
-        s.newtable();
+        s.newtable(); //table which will have all lua data
+
+        s.newtable(); //table to udata
+
+        s.newtable();//metatable
+        s.push("kv");
+        s.setfield("__mode");
+        lua_setmetatable(s,-2);
+
+        s.push(1);
         s.pushvalue(udata_pos);
-        s.setfield("__udata");
-        s.settable();
+        s.settable(); //t[1]=udata
+
+        s.setfield("__udata"); //put it into __udata[1]=udata
+        s.settable(); //reg[class_name][ptr]=that table.
 
         s.pop();
         //lua::StackDump(s);
@@ -212,6 +222,10 @@ struct lua_object
 
         s.pushvalue(myself);
         s.newtable();
+        s.newtable();
+        s.push("kv");
+        s.setfield("__mode");
+        lua_setmetatable(s,-2);
         lua::StackDump(s);
         s.settable(LUA_REGISTRYINDEX);
         lua::StackDump(s);
@@ -228,10 +242,11 @@ template <typename T>
  string lua_object<T>::_name;
 #define LUA_WRAP(type)typedef lua_object<type> mywrap;\
     static type* pullfromlua(lua::state &s,int &start){ start++;return type::mywrap::GetPointer(s,start-1);}\
-    int pushtolua(lua::state &s){ type::mywrap::GetTable(s,this);s.getfield("__udata");lua::StackDump(s);s.remove(-2);return 1;}\
+    int pushtolua(lua::state &s){type::mywrap::GetTable(s,this);s.getfield("__udata");s.push(1);s.gettable();s.remove(-2);return 1;}\
     static void addfunctions(){\
 
 #define LUA_FUNC mywrap::AddFunction
+#define LUA_GC(func) mywrap::AddFunction<void>(func,"__gc")
 #define LUA_GET(var,name) mywrap::getters[name]=[](mywrap::mytype *t,lua::state &s){ return convert_to_lua(t->var,s); }
 #define LUA_SET(var,name) mywrap::setters[name]=[](mywrap::mytype *t,lua::state &s){ int dum=3;t->var=convert_from_lua<decltype(t->var)>(s,dum);return 0;}
 #define LUA_END_WRAP() }
