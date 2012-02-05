@@ -46,7 +46,14 @@ public:
         myargs args;
         myfunc f2=(myfunc)lua_touserdata(L,lua_upvalueindex(1));
         int stacknum=1;
+        try{
         lua_to_tuple<myargs,0,Args...>(args,s,stacknum);
+        }
+        catch(lua::exception &e)
+        {
+            s.push(e.what());
+            lua_error(s);
+        }
         myret r=apply<myret,Args...>(f2,args);
         return convert_to_lua(r,s);
         //f(args...);
@@ -92,7 +99,14 @@ public:
         myargs args;
         myfunc f2=(myfunc)lua_touserdata(L,lua_upvalueindex(1));
         int stacknum=1;
+        try{
         lua_to_tuple<myargs,0,Args...>(args,s,stacknum);
+        }
+        catch(lua::exception &e)
+        {
+            s.push(e.what());
+            lua_error(s);
+        }
         apply<myret,Args...>(f2,args);
         return 0;
         //f(args...);
@@ -150,7 +164,14 @@ public:
         typename T::mywrap::lua_udata* obj_ptr;
 
         s.touserdata(obj_ptr,1);
+        try{
         lua_to_tuple<myargs,0,Args...>(args,s,stacknum);
+        }
+        catch(lua::exception &e)
+        {
+            s.push(e.what());
+            lua_error(s);
+        }
         myret r=applyTuple<T,myret,Args...>(obj_ptr->ptr,t_hold->fptr,args);
         return convert_to_lua(r,s);
         //f(args...);
@@ -204,7 +225,14 @@ public:
         typename T::mywrap::lua_udata* obj_ptr;
 
         s.touserdata(obj_ptr,1);
+        try{
         lua_to_tuple<myargs,0,Args...>(args,s,stacknum);
+        }
+        catch(lua::exception &e)
+        {
+            s.push(e.what());
+            lua_error(s);
+        }
         applyTuple<T,myret,Args...>(obj_ptr->ptr,t_hold->fptr,args);
         return 0;
         //f(args...);

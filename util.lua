@@ -8,6 +8,6 @@ function PrintResult(val,name)
 end
 function Error(msg)
 	print("ERROR:"..msg)
-	print(debug.traceback())
+	print(debug.traceback("",2))
 	return msg
 end

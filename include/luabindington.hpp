@@ -11,7 +11,8 @@
 #include <map>
 #include "luabindington/util.h"
 #include "luabindington/function.h"
-//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file,type checking (possibly casting)
+//TODO: typecasting, from lua as global func (e.g tuples/pairs etc), split this file,type checking (possibly casting), do sth with functions (s)
+//TODO: more nice way to add casts.
 //TODO: fix includes.
 //typecasting:
 //1.add parent to registry table (multiple parents ok?)
@@ -41,27 +42,69 @@ template <typename T>
 struct lua_object
 {
     typedef T mytype;
-    typedef std::vector<lua_function_base*> lua_f_vec;
+    //typedef std::vector<lua_function_base*> lua_f_vec;
     typedef std::map<string,std::function<int(T*,lua::state&)> > manip_t;
 
     static manip_t getters;
     static manip_t setters;
-    static lua_f_vec functions;
+    //static lua_f_vec functions;
     static string _name;
     struct lua_udata
     {
         T* ptr;
     };
-    template<typename RetType,typename ...args>
-    static void AddFunction(RetType (T::*fptr)(args...) ,string name)
+    /*template<class base,typename ftype>
+    static void AddBase(string basename)
     {
-        functions.push_back(new lua_function_member<T,RetType,args...>(fptr,name));
+        functions.push_back(new lua_function_member<T,base*>(base (ftype)() ,"cast_"+basename));
+    }*/
+    template<typename RetType,typename Z,typename ...args>
+    static void AddFunction(lua::state &s,RetType (Z::*fptr)(args...) ,string name)
+    {
+        lua_function_member<Z,RetType,args...> myf(fptr,name);
+        myf.Register(s);
+
     }
-    static int PushUData(lua::state &s,lua_udata *p) //table(metable info), udata TODO __gc does not work for some reason.
+
+    static void getAncestor(lua::state &s,T* ptr_this)
+    {
+        //int top=s.gettop();
+        GetTable(s,ptr_this);
+        s.getfield("__ancestor");
+        if(s.is<lua::nil>())
+        {
+            s.pop(1);
+            s.getfield("__udata");
+            s.push(1);
+            s.gettable();
+            s.remove(-2);
+        }
+        //size_t ret=s.as<size_t>(0,-1);
+        //s.settop(top);
+        s.remove(-2);
+        //return 1;
+    }
+    static void setAncestor(lua::state &s,T* ptr_this)
+    {
+        GetTable(s,ptr_this);
+        s.pushvalue(-2);
+        s.setfield("__ancestor");
+        s.remove(-1);
+    }
+    static void AddBase(lua::state &s,string name)
+    {
+        s.newtable();
+        s.push(1);
+        s.push(name);
+        s.settable();
+        s.setfield("__bases");
+
+    }
+    static int PushUData(lua::state &s,lua_udata *p) //table(metable info), udata
     {
         //LogLua(s);
         std::cout<<"PUSHUDATA\n";
-        //lua::StackDump(s);
+        lua::StackDump(s);
         int udata_pos=s.gettop();
         s.pushvalue(udata_pos-1);
         //LogLua(s);
@@ -85,21 +128,34 @@ struct lua_object
         s.settable(); //t[1]=udata
 
         s.setfield("__udata"); //put it into __udata[1]=udata
+        lua::StackDump(s);
         s.settable(); //reg[class_name][ptr]=that table.
 
         s.pop();
-        //lua::StackDump(s);
+
         return 1;
     }
-    static int GetTable(lua_State *L,T* p) //BUG HERE
+    static int RemoveTable(lua_State *L,T* p)
     {
-        std::cout<<"GETTABLE w name="<<_name<<" and p="<<p<<"\n";
-        lua::StackDump(L);
         lua::state s(L);
         s.getglobal(_name);
         s.gettable(LUA_REGISTRYINDEX);
         s.push<unsigned int>(reinterpret_cast<unsigned int>(p));
-        lua::StackDump(L);
+        s.push();
+        //lua::StackDump(L);
+        //s.pushlightuserdata(p);
+        s.settable();
+        return 0;
+    }
+    static int GetTable(lua_State *L,T* p) //TODO if table has ancestor, than return "real" (ancestors) table
+    {
+        //std::cout<<"GETTABLE w name="<<_name<<" and p="<<p<<"\n";
+        //lua::StackDump(L);
+        lua::state s(L);
+        s.getglobal(_name);
+        s.gettable(LUA_REGISTRYINDEX);
+        s.push<unsigned int>(reinterpret_cast<unsigned int>(p));
+        //lua::StackDump(L);
         //s.pushlightuserdata(p);
         s.gettable();
         if(s.is<lua::table>())
@@ -115,7 +171,7 @@ struct lua_object
             s.getglobal(_name);
             lua_udata *udata=(lua_udata*)s.newuserdata(sizeof(lua_udata));
             udata->ptr=p;
-            lua::StackDump(L);
+            //lua::StackDump(L);
             PushUData(s,udata);//TODO return userdata, not table, could return table...
             s.pop(2);
 
@@ -130,9 +186,9 @@ struct lua_object
     }
     static int NewObject(lua_State *L)
     {
-        //std::cout<<"New object\n";
+        std::cout<<"New object:"<<_name<<"\n";
         lua::state s(L);
-        //LogLua(s);
+        lua::StackDump(s);
         lua_udata *p=(lua_udata*)s.newuserdata(sizeof(lua_udata));
         p->ptr=new T;
         //std::cout<<"Pointer:"<<p->ptr<<"\n";
@@ -147,6 +203,7 @@ struct lua_object
     }
     static int lua_Index(lua_State *L)// 1: userdata,2:key
     {
+        //check ancestors table first, don't check casted table (nothing there)
         //std::cout<<"INDEX\n";
         lua::state s(L);
         T* ptr=GetPointer(s,1);
@@ -175,6 +232,7 @@ struct lua_object
     }
     static int lua_NewIndex(lua_State *L)
     {
+        //if is casted create new index in ancestors table not here.
        // std::cout<<"NEWINDEX\n";
         //1-userdata,2-key,3-value
         lua::state s(L);
@@ -193,26 +251,47 @@ struct lua_object
         s.settable();
         return 0;
     }
+    static int lua_GC(lua_State *L)
+    {
+
+        lua::state s(L);
+        T* ptr=GetPointer(s,1);
+        std::cout<<"LUA_GC called:"<<ptr<<"\n";
+        getAncestor(s,ptr);
+        if(lua_rawequal(L,-1,1))
+        {
+            RemoveTable(s,ptr);
+            s.getmetatable(1);
+            s.getfield("__gc_cpp");
+            if(s.is<lua::cfunction>())
+            {
+                s.pushvalue(1);
+                s.call(1);
+
+            }
+        }
+        return 0;
+    }
     static void Register(lua::state &s,string name)
     {
         _name=name;
-        s.newtable(); //metatable.
-
+        std::cout<<"Registering:"<<name<<"\n";
+        s.newtable(); //metatable, and main table
+        lua::StackDump(s);
         int myself=s.gettop();
-        if(functions.size()==0)
-        {
-            T::addfunctions();
-        }
+
+        T::addfunctions(s);
+        lua::StackDump(s);
         s.push(name);
-        s.setfield("name");
+        s.setfield("typename");
 
         lua_pushcclosure(s,&NewObject,0);
         s.setfield("new");
 
-        for(lua_f_vec::iterator i=functions.begin();i!=functions.end();i++)
-        {
-            (*i)->Register(s);
-        }
+
+
+        lua_pushcfunction(s,&lua_GC);
+        s.setfield("__gc");
 
         lua_pushcfunction(s,&lua_Index);
         s.setfield("__index");
@@ -222,12 +301,13 @@ struct lua_object
 
         s.pushvalue(myself);
         s.newtable();
-        s.newtable();
-        s.push("kv");
-        s.setfield("__mode");
-        lua_setmetatable(s,-2);
-        lua::StackDump(s);
+        //s.newtable();
+        //s.push("kv");
+        //s.setfield("__mode");
+        //lua_setmetatable(s,-2);
+        //lua::StackDump(s);
         s.settable(LUA_REGISTRYINDEX);
+        std::cout<<"End register\n";
         lua::StackDump(s);
         s.setglobal(name);
     }
@@ -236,20 +316,26 @@ template <typename T>
 typename lua_object<T>::manip_t lua_object<T>::getters;
 template <typename T>
 typename lua_object<T>::manip_t lua_object<T>::setters;
-template <typename T>
-typename lua_object<T>::lua_f_vec lua_object<T>::functions;
+//template <typename T>
+//typename lua_object<T>::lua_f_vec lua_object<T>::functions;
 template <typename T>
  string lua_object<T>::_name;
 #define LUA_WRAP(type)typedef lua_object<type> mywrap;\
     static type* pullfromlua(lua::state &s,int &start){ start++;return type::mywrap::GetPointer(s,start-1);}\
     int pushtolua(lua::state &s){type::mywrap::GetTable(s,this);s.getfield("__udata");s.push(1);s.gettable();s.remove(-2);return 1;}\
-    static void addfunctions(){\
+    static void addfunctions(lua::state &s){\
 
 #define LUA_FUNC mywrap::AddFunction
-#define LUA_GC(func) mywrap::AddFunction<void>(func,"__gc")
+#define LUA_GC(func) mywrap::AddFunction<void>(s,func,"__gc_cpp")
+//#define LUA_CAST(totype,name)  mywrap::AddFunction<totype*>(func,"cast" name)
+//#define LUA_ADD_BASE(basetype,luaname) mywrap::AddBase<basetype,mywrap::mytype::cast_#basetype>(luaname)
+#define LUA_ADD_BASE2(basetype,luaname) basetype::addfunctions(s);mywrap::AddFunction< basetype *>(s,&mywrap::mytype::cast_##basetype,"cast_" luaname);
+#define LUA_ADD_BASE(basetype,luaname) mywrap::AddFunction< basetype *>(s,&mywrap::mytype::cast_##basetype,"cast_" luaname);\
+                            mywrap::AddBase(s,luaname)
 #define LUA_GET(var,name) mywrap::getters[name]=[](mywrap::mytype *t,lua::state &s){ return convert_to_lua(t->var,s); }
 #define LUA_SET(var,name) mywrap::setters[name]=[](mywrap::mytype *t,lua::state &s){ int dum=3;t->var=convert_from_lua<decltype(t->var)>(s,dum);return 0;}
 #define LUA_END_WRAP() }
+#define LUA_CAST(totype) totype* cast_##totype(lua_state_dummy st){mywrap::getAncestor(st.s,this);totype* ptr2=dynamic_cast<totype *>(this);totype::mywrap::setAncestor(st.s,ptr2);return ptr2;}
 struct lua_state_dummy
 {
 

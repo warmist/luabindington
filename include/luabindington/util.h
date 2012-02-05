@@ -48,6 +48,40 @@ template <class T>
 typename std::enable_if<class_has_pullfromlua_ptr_function<T>::value,T>::type
 convert_from_lua_impl(lua::state &s,int &stacknum)
 {
+
+    if(!lua_getmetatable(s,stacknum))//type check
+    {
+        throw lua::bad_conversion("Argument does not have metatable.");
+    }
+    else
+    {
+        s.getfield("typename");
+        if(s.is<lua::nil>())
+        {
+            s.pop(2); //pop nil and metatable
+            throw lua::bad_conversion("Argument does not have correct metatable.");
+        }
+        std::string tname=s.as<std::string>();
+        s.pop(1); //pop typename
+        if(tname!=std::remove_pointer<T>::type::mywrap::_name)
+        {
+            s.getfield("cast_"+std::remove_pointer<T>::type::mywrap::_name);
+            if(s.is<lua::nil>())
+            {
+                s.pop(1);//pop nil
+                s.pop(1);//pop metatable
+                throw lua::bad_conversion("Argument is not correct type and does not have a correct cast.");
+            }
+            else //exist casts, replace value in stack
+            {
+                s.remove(-2);//remove metatable
+                s.pushvalue(stacknum);
+                s.call(1,1); //call function.
+                s.replace(stacknum);//replace argument
+            }
+
+        }
+    }
     T v=std::remove_pointer<T>::type::pullfromlua(s,stacknum);
     return v;
 }
@@ -73,11 +107,12 @@ T convert_from_lua(lua::state &s,int &stacknum)
     return convert_from_lua_impl<T>(s,stacknum);
 }
 
-template <typename t_type,int num>
+template <typename t_type,int num> //terminal
 void lua_to_tuple(t_type &mtuple,lua::state &s,int &stacknum)
 {
 
 }
+
 template <typename t_type,int num,typename T,typename ...Tail>
 void lua_to_tuple(t_type &mtuple,lua::state &s,int &stacknum)
 {
@@ -91,13 +126,13 @@ void lua_to_tuple(t_type &mtuple,lua::state &s,int &stacknum)
         std::stringstream err;
         err<<e.what();
         err<<" at:"<<num<<" argument.";
-        s.push(err.str());
-        lua_error(s); //TODO is this safe because it never returns, using longjmp
+        //s.push(err.str());
+        //lua_error(s); //TODO is this safe because it never returns, using longjmp?
         //s.traceback();
-        //throw lua::bad_conversion(err.str().c_str());
+        throw lua::bad_conversion(err.str().c_str());
     }
     //stacknum++;
-    lua_to_tuple<t_type,num+1,Tail...>(mtuple,s,stacknum);
+    lua_to_tuple<t_type,num+1,Tail...>(mtuple,s,stacknum); //continue converting
 }
 
 
