@@ -33,8 +33,6 @@ struct ptr_wrap
     }
     static int lua_Index(lua_State *L)// 1: userdata,2:key
     {
-        //check ancestors table first, don't check casted table (nothing there)
-        //std::cout<<"INDEX\n";
         lua::state s(L);
         T* ptr=GetPointer(s,1);
         if(s.is<string>(2))
@@ -49,8 +47,6 @@ struct ptr_wrap
     }
     static int lua_NewIndex(lua_State *L)
     {
-        //if is casted create new index in ancestors table not here.
-       // std::cout<<"NEWINDEX\n";
         //1-userdata,2-key,3-value
         lua::state s(L);
         T* ptr=GetPointer(s,1);
@@ -99,15 +95,22 @@ struct ptr_wrap
         s.setfield(name);
         s.pop();
     }
-
+	template <class T_parent>
+    static void AddParent()
+    {
+        getters.insert(T_parent::getters.begin(),T_parent::getters.end());
+		setters.insert(T_parent::setters.begin(),T_parent::setters.end());
+    }
 };
 
 template <typename T>
-typename lua_object<T>::manip_t lua_object<T>::getters;
+typename ptr_wrap<T>::manip_t ptr_wrap<T>::getters;
 template <typename T>
-typename lua_object<T>::manip_t lua_object<T>::setters;
-#define LIGHT_WRAP(type,state){ ptr_wrap<type> wrp; wrp.register(state,name,#type);
-#define
-#define LIGHT_WRAP_END  }
+typename ptr_wrap<T>::manip_t ptr_wrap<T>::setters;
+#define LIGHT_WRAP_DECL(type) typedef ptr_wrap<T> _##type##wrap;
+#define LIGHT_WRAP_IMPL(type,name,state) _##type##wrap::Register(state,name);
+#define LIGHT_WRAP_MEMBER_SET(type,member,name)  _##type##wrap::getters[name]=[](type *t,lua::state &s){ return convert_to_lua(t->var,s); }
+#define LIGHT_WRAP_MEMBER_GET(type,member,name)  _##type##wrap::setters[name]=[](type *t,lua::state &s){ int dum=3;t->var=convert_from_lua<decltype(t->var)>(s,dum);return 0;}
+#define LIGHT_WRAP_MEMBER(type,member)  LIGHT_WRAP_MEMBER_SET(type,member,#member);LIGHT_WRAP_MEMBER_GET(type,member,#member);
 }
 #endif // LIGHTWEIGHT_H_INCLUDED
