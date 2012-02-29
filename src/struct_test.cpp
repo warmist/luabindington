@@ -38,7 +38,7 @@ struct complex_struct
 {
     int a;
     simple_struct b;
-    static complex_struct pullfromlua(lua::state &s,int &start)
+    /*static complex_struct pullfromlua(lua::state &s,int &start)
     {
         complex_struct t;
         if(!s.is<lua::table>(start))
@@ -52,7 +52,7 @@ struct complex_struct
         s.pop();
         start++;
         return t;
-    }
+    }*/
     /*int pushtolua(lua::state &s)
     {
         s.newtable();
@@ -72,6 +72,22 @@ int pushtolua<complex_struct>(complex_struct inp,lua::state &s)
     convert_to_lua(inp.b,s);
     s.setfield("b");
     return 1;
+}
+template<>
+complex_struct pullfromlua<complex_struct>(lua::state &s,int &start)
+{
+    complex_struct t;
+    if(!s.is<lua::table>(start))
+        throw lua::runtime_error("Incorrect argument, needs table");
+    s.getfield("a");
+    t.a=s.as<int>(-1);
+    s.pop();
+    s.getfield("b");
+    int t_pos=s.gettop();
+    t.b=convert_from_lua<simple_struct>(s,t_pos);
+    s.pop();
+    start++;
+    return t;
 }
 void arg_is_struct(simple_struct a)
 {

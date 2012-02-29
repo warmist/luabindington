@@ -94,12 +94,25 @@ convert_from_lua_impl(lua::state &s,int &stacknum)
 }
 
 template <class T>
-typename std::enable_if<!has_pullfromlua<T>::value && !std::is_pointer<T>::value,T>::type
+typename std::enable_if<!has_pullfromlua<T>::value && !std::is_pointer<T>::value && (std::is_arithmetic<T>::value || std::is_same<T,std::string>::value),T>::type
 convert_from_lua_impl(lua::state &s,int &stacknum)
 {
     T v=s.as<T>(stacknum);
     stacknum++;
     return v;
+}
+template <class T>
+T pullfromlua(lua::state &s,int &start)
+{
+    constexpr typename std::add_pointer<T>::type  b=static_cast<typename std::add_pointer<T>::type >(0);
+    static_assert(b,"type does not have function specialization for pullfromlua");
+    //TODO this could generate warning: no return in non-void function...
+}
+template <class T>
+typename std::enable_if<!has_pullfromlua<T>::value  && (!std::is_arithmetic<T>::value && !std::is_same<T,std::string>::value),T>::type
+convert_from_lua_impl(lua::state &s,int &stacknum)
+{
+    return pullfromlua<T>(s,stacknum);
 }
 template <class T>
 T convert_from_lua(lua::state &s,int &stacknum)
