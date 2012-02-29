@@ -53,7 +53,7 @@ struct complex_struct
         start++;
         return t;
     }
-    int pushtolua(lua::state &s)
+    /*int pushtolua(lua::state &s)
     {
         s.newtable();
         s.push(a);
@@ -61,8 +61,18 @@ struct complex_struct
         b.pushtolua(s);
         s.setfield("b");
         return 1;
-    }
+    }*/
 };
+template<>
+int pushtolua<complex_struct>(complex_struct inp,lua::state &s)
+{
+    s.newtable();
+    s.push(inp.a);
+    s.setfield("a");
+    convert_to_lua(inp.b,s);
+    s.setfield("b");
+    return 1;
+}
 void arg_is_struct(simple_struct a)
 {
     std::cout<<"in arg is struct a="<<a.a<<" b="<<a.b<<" c="<<a.c<<"\n";
@@ -81,12 +91,19 @@ void arg_is_complex(complex_struct a)
     std::cout<<"arg is complex_struct a="<<a.a<<"\n";
     std::cout<<"\ta="<<a.b.a<<"\t"<<a.b.b<<"\t"<<a.b.c<<" \t";
 }
+complex_struct make_complex()
+{
+    complex_struct a;
+    a.a=0;
+    return a;
+}
 void do_struct_test()
 {
     lua::state state=lua::glua::Get();
     lua_function<void,simple_struct>(&arg_is_struct,"arg_is_struct",state);
     lua_function<simple_struct>(&ret_is_struct,"ret_is_struct",state);
     lua_function<void,complex_struct>(&arg_is_complex,"arg_is_complex",state);
+    lua_function<complex_struct>(&make_complex,"make_complex",state);
     state.getglobal("Error");
     state.loadfile("struct_test.lua");
     try{

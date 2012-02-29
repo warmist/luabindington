@@ -167,12 +167,27 @@ convert_to_lua_impl(T val,lua::state &s)
 }
 
 template <class T>
-typename std::enable_if<!class_has_pushtolua_function<T>::value && !std::is_pointer<T>::value,int>::type
+typename std::enable_if<!class_has_pushtolua_function<T>::value && !std::is_pointer<T>::value && (std::is_arithmetic<T>::value || std::is_same<T,std::string>::value),int>::type
 convert_to_lua_impl(T val,lua::state &s)
 {
     s.push(val);
     return 1;
 }
+template <class T>
+int pushtolua(T ptr,lua::state &s)
+{
+    constexpr typename std::add_pointer<T>::type  b=static_cast<typename std::add_pointer<T>::type >(0);
+    static_assert(b,"type does not have function specialization for pushtolua");
+    return 0;
+}
+template <class T>
+typename std::enable_if<!class_has_pushtolua_function<typename std::remove_pointer<T>::type>::value  && (!std::is_arithmetic<T>::value && !std::is_same<T,std::string>::value),int>::type
+convert_to_lua_impl(T val,lua::state &s)
+{
+
+    return pushtolua(val,s);
+}
+
 template <class T>
 int convert_to_lua(T val,lua::state &s)
 {
