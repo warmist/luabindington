@@ -46,6 +46,7 @@
 		</Linker>
 		<Unit filename="include\function_test.h" />
 		<Unit filename="include\lightweight.h" />
+		<Unit filename="include\lightweigth_test.h" />
 		<Unit filename="include\luabindington.hpp" />
 		<Unit filename="include\luabindington\function.h" />
 		<Unit filename="include\luabindington\util.h" />
@@ -56,6 +57,7 @@
 		<Unit filename="include\unpack.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="src\function_test.cpp" />
+		<Unit filename="src\lightweigth_test.cpp" />
 		<Unit filename="src\luastuff.cpp" />
 		<Unit filename="src\luaxx\luaxx.cc" />
 		<Unit filename="src\object_test.cpp" />

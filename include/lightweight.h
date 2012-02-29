@@ -21,6 +21,7 @@ struct ptr_wrap
     typedef std::map<string,std::function<int(T*,lua::state&)> > manip_t;
     static manip_t getters;
     static manip_t setters;
+    static std::string _name;
     struct lua_udata
     {
         T* ptr;
@@ -30,6 +31,35 @@ struct ptr_wrap
         lua_udata *udata;
         s.touserdata(udata,index);
         return udata->ptr;
+    }
+    static int PushUData(lua::state &s,lua_udata *p) //table(metable info), udata
+    {
+        int udata_pos=s.gettop();
+        s.pushvalue(udata_pos-1);
+        lua_setmetatable(s,udata_pos);
+        //s.pop();
+        return 1;
+    }
+    static int NewObject(lua_State *L,T* ptr=nullptr)
+    {
+        lua::state s(L);
+        s.getglobal("types");
+        if(s.is<lua::nil>())
+        {
+            throw std::runtime_error("types table does not exist!");
+        }
+        s.getfield(_name);
+        if(s.is<lua::nil>())
+        {
+            throw std::runtime_error("object metatable does not exist!");
+        }
+
+        lua_udata *p=(lua_udata*)s.newuserdata(sizeof(lua_udata));
+        if(ptr==nullptr)
+            p->ptr=new T;
+        else
+            p->ptr=ptr;
+        return PushUData(s,p);
     }
     static int lua_Index(lua_State *L)// 1: userdata,2:key
     {
@@ -62,16 +92,15 @@ struct ptr_wrap
     }
     static void Register(lua::state &s,string name)
     {
+        _name=name;
         s.newtable(); //this will be metatable for this ptrwrapper
         int id_metatable=s.gettop();
-
-
 
         s.push(name);
         s.setfield("typename");
 
-        lua_pushcclosure(s,&NewObject,0);
-        s.setfield("new");
+        //lua_pushcclosure(s,&NewObject,0);
+        //s.setfield("new");
 
         lua_pushcfunction(s,&lua_Index);
         s.setfield("__index");
@@ -79,7 +108,6 @@ struct ptr_wrap
         lua_pushcfunction(s,&lua_NewIndex);
         s.setfield("__newindex");
 
-        s.pushvalue(id_metatable);
 
         //s.newtable();
         //s.push("kv");
@@ -90,8 +118,10 @@ struct ptr_wrap
         if(s.is<lua::nil>())
         {
             s.newtable();
+            s.pushvalue(-1);
             s.setglobal("types");
         }
+        s.pushvalue(id_metatable);
         s.setfield(name);
         s.pop();
     }
@@ -107,10 +137,14 @@ template <typename T>
 typename ptr_wrap<T>::manip_t ptr_wrap<T>::getters;
 template <typename T>
 typename ptr_wrap<T>::manip_t ptr_wrap<T>::setters;
-#define LIGHT_WRAP_DECL(type) typedef ptr_wrap<T> _##type##wrap;
+template <typename T>
+ string ptr_wrap<T>::_name;
+#define LIGHT_WRAP_DECL(type) typedef lua::ptr_wrap<type> _##type##wrap;\
+template<>int pushtolua<type*>(type* ptr,lua::state &s){ return lua::ptr_wrap<type>::NewObject(s,ptr);}\
+template<>int pushtolua<type&>(type& ptr,lua::state &s){ return lua::ptr_wrap<type>::NewObject(s,&ptr);}
 #define LIGHT_WRAP_IMPL(type,name,state) _##type##wrap::Register(state,name);
-#define LIGHT_WRAP_MEMBER_SET(type,member,name)  _##type##wrap::getters[name]=[](type *t,lua::state &s){ return convert_to_lua(t->var,s); }
-#define LIGHT_WRAP_MEMBER_GET(type,member,name)  _##type##wrap::setters[name]=[](type *t,lua::state &s){ int dum=3;t->var=convert_from_lua<decltype(t->var)>(s,dum);return 0;}
+#define LIGHT_WRAP_MEMBER_SET(type,member,name)  _##type##wrap::getters[name]=[](type *t,lua::state &s){ return convert_to_lua(t->member,s); }
+#define LIGHT_WRAP_MEMBER_GET(type,member,name)  _##type##wrap::setters[name]=[](type *t,lua::state &s){ int dum=3;t->member=convert_from_lua<decltype(t->member)&>(s,dum);return 0;}
 #define LIGHT_WRAP_MEMBER(type,member)  LIGHT_WRAP_MEMBER_SET(type,member,#member);LIGHT_WRAP_MEMBER_GET(type,member,#member);
 }
 #endif // LIGHTWEIGHT_H_INCLUDED
