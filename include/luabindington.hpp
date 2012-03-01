@@ -321,7 +321,7 @@ typename lua_object<T>::manip_t lua_object<T>::setters;
 template <typename T>
  string lua_object<T>::_name;
 #define LUA_WRAP(type)typedef lua_object<type> mywrap;\
-    static type* pullfromlua(lua::state &s,int &start){ start++;return type::mywrap::GetPointer(s,start-1);}\
+    static void pullfromlua(lua::state &s,int &start,type*& ref){ start++;ref=type::mywrap::GetPointer(s,start-1);}\
     int pushtolua(lua::state &s){type::mywrap::GetTable(s,this);s.getfield("__udata");s.push(1);s.gettable();s.remove(-2);return 1;}\
     static void addfunctions(lua::state &s){\
 
@@ -333,18 +333,16 @@ template <typename T>
 #define LUA_ADD_BASE(basetype,luaname) mywrap::AddFunction< basetype *>(s,&mywrap::mytype::cast_##basetype,"cast_" luaname);\
                             mywrap::AddBase(s,luaname)
 #define LUA_GET(var,name) mywrap::getters[name]=[](mywrap::mytype *t,lua::state &s){ return convert_to_lua(t->var,s); }
-#define LUA_SET(var,name) mywrap::setters[name]=[](mywrap::mytype *t,lua::state &s){ int dum=3;t->var=convert_from_lua<decltype(t->var)>(s,dum);return 0;}
+#define LUA_SET(var,name) mywrap::setters[name]=[](mywrap::mytype *t,lua::state &s){ int dum=3;convert_from_lua<decltype(t->var)>(s,dum,t->var);return 0;}
 #define LUA_END_WRAP() }
 #define LUA_CAST(totype) totype* cast_##totype(lua_state_dummy st){mywrap::getAncestor(st.s,this);totype* ptr2=dynamic_cast<totype *>(this);totype::mywrap::setAncestor(st.s,ptr2);return ptr2;}
 struct lua_state_dummy
 {
 
     lua::state s;
-    static lua_state_dummy pullfromlua(lua::state &s,int &start)
+    static void pullfromlua(lua::state &s,int &start,lua_state_dummy& p)
     {
-        lua_state_dummy p;
         p.s=s;
-        return p;
     }
     int pushtolua(lua::state &s)
     {

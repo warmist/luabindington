@@ -9,7 +9,7 @@ struct class_has_pullfromlua_function:
 template<typename T>
 struct class_has_pullfromlua_function<T,true>
 {
-    template<T (*)(lua::state &,int &)> struct tester;
+    template<void (*)(lua::state &,int &,T&)> struct tester;
 
     template<typename U>
     static char has_matching_member(tester<&U::pullfromlua>*); // A
@@ -27,7 +27,7 @@ struct class_has_pullfromlua_ptr_function:
 template<typename T>
 struct class_has_pullfromlua_ptr_function<T,true>
 {
-    template<T (*)(lua::state &,int &)> struct tester;
+    template<void (*)(lua::state &,int &,T&)> struct tester;
 
     template<typename U>
     static char has_matching_member(tester<&std::remove_pointer<U>::type::pullfromlua>*); // A
@@ -45,8 +45,8 @@ struct has_pullfromlua:
 {};
 
 template <class T>
-typename std::enable_if<class_has_pullfromlua_ptr_function<T>::value,T>::type
-convert_from_lua_impl(lua::state &s,int &stacknum)
+typename std::enable_if<class_has_pullfromlua_ptr_function<T>::value,void>::type
+convert_from_lua_impl(lua::state &s,int &stacknum,T& trg)
 {
 
     if(!lua_getmetatable(s,stacknum))//type check
@@ -82,42 +82,39 @@ convert_from_lua_impl(lua::state &s,int &stacknum)
 
         }
     }
-    T v=std::remove_pointer<T>::type::pullfromlua(s,stacknum);
-    return v;
+    std::remove_pointer<T>::type::pullfromlua(s,stacknum,trg);
 }
 template <class T>
-typename std::enable_if<class_has_pullfromlua_function<T>::value,T>::type
-convert_from_lua_impl(lua::state &s,int &stacknum)
+typename std::enable_if<class_has_pullfromlua_function<T>::value,void>::type
+convert_from_lua_impl(lua::state &s,int &stacknum,T &trg)
 {
-    T v=T::pullfromlua(s,stacknum);
-    return v;
+    T::pullfromlua(s,stacknum,trg);
 }
 
 template <class T>
-typename std::enable_if<!has_pullfromlua<T>::value && !std::is_pointer<T>::value && (std::is_arithmetic<T>::value || std::is_same<T,std::string>::value),T>::type
-convert_from_lua_impl(lua::state &s,int &stacknum)
+typename std::enable_if<!has_pullfromlua<T>::value && !std::is_pointer<T>::value && (std::is_arithmetic<T>::value || std::is_same<T,std::string>::value),void>::type
+convert_from_lua_impl(lua::state &s,int &stacknum,T &trg)
 {
-    T v=s.as<T>(stacknum);
+    trg=s.as<T>(stacknum);
     stacknum++;
-    return v;
 }
 template <class T>
-T pullfromlua(lua::state &s,int &start)
+void pullfromlua(lua::state &s,int &start,T &trg)
 {
     constexpr typename std::add_pointer<T>::type  b=static_cast<typename std::add_pointer<T>::type >(0);
     static_assert(b,"type does not have function specialization for pullfromlua");
     //TODO this could generate warning: no return in non-void function...
 }
 template <class T>
-typename std::enable_if<!has_pullfromlua<T>::value  && (!std::is_arithmetic<T>::value && !std::is_same<T,std::string>::value),T>::type
-convert_from_lua_impl(lua::state &s,int &stacknum)
+typename std::enable_if<!has_pullfromlua<T>::value  && (!std::is_arithmetic<T>::value && !std::is_same<T,std::string>::value),void>::type
+convert_from_lua_impl(lua::state &s,int &stacknum,T &trg)
 {
-    return pullfromlua<T>(s,stacknum);
+    return pullfromlua(s,stacknum,trg);
 }
 template <class T>
-T convert_from_lua(lua::state &s,int &stacknum)
+void convert_from_lua(lua::state &s,int &stacknum,T& trg)
 {
-    return convert_from_lua_impl<T>(s,stacknum);
+    convert_from_lua_impl<T>(s,stacknum,trg);
 }
 
 template <typename t_type,int num> //terminal
@@ -131,7 +128,7 @@ void lua_to_tuple(t_type &mtuple,lua::state &s,int &stacknum)
 {
     try
     {
-        std::get<num>(mtuple)=convert_from_lua<T>(s,stacknum);//s.as<T>(stacknum);
+        convert_from_lua<T>(s,stacknum,std::get<num>(mtuple));
     }
     catch(lua::bad_conversion &e)
     {
@@ -180,7 +177,8 @@ convert_to_lua_impl(T val,lua::state &s)
 }
 
 template <class T>
-typename std::enable_if<!class_has_pushtolua_function<T>::value && !std::is_pointer<T>::value && (std::is_arithmetic<T>::value || std::is_same<T,std::string>::value),int>::type
+typename std::enable_if<!class_has_pushtolua_function<T>::value && !std::is_pointer<T>::value &&
+    (std::is_arithmetic<typename std::remove_reference<T>::type>::value || std::is_same<T,std::string>::value) ,int>::type
 convert_to_lua_impl(T val,lua::state &s)
 {
     s.push(val);
@@ -207,5 +205,9 @@ int convert_to_lua(T val,lua::state &s)
     return convert_to_lua_impl(val,s);
 }
 
-
+template <class T>
+T& make_ref(T& val)
+{
+    return val;
+}
 #endif

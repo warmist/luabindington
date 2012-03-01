@@ -141,10 +141,11 @@ template <typename T>
  string ptr_wrap<T>::_name;
 #define LIGHT_WRAP_DECL(type) typedef lua::ptr_wrap<type> _##type##wrap;\
 template<>int pushtolua<type*>(type* ptr,lua::state &s){ return lua::ptr_wrap<type>::NewObject(s,ptr);}\
-template<>int pushtolua<type&>(type& ptr,lua::state &s){ return lua::ptr_wrap<type>::NewObject(s,&ptr);}
+template<>int pushtolua<type&>(type& ptr,lua::state &s){ return lua::ptr_wrap<type>::NewObject(s,&ptr);}\
+template<>void pullfromlua(lua::state &s,int &start,type& t){ t=*lua::ptr_wrap<type>::GetPointer(s,start);start++;}
 #define LIGHT_WRAP_IMPL(type,name,state) _##type##wrap::Register(state,name);
-#define LIGHT_WRAP_MEMBER_SET(type,member,name)  _##type##wrap::getters[name]=[](type *t,lua::state &s){ return convert_to_lua(t->member,s); }
-#define LIGHT_WRAP_MEMBER_GET(type,member,name)  _##type##wrap::setters[name]=[](type *t,lua::state &s){ int dum=3;t->member=convert_from_lua<decltype(t->member)&>(s,dum);return 0;}
+#define LIGHT_WRAP_MEMBER_SET(Ttype,member,name)  _##Ttype##wrap::getters[name]=[](Ttype *t,lua::state &s){ return convert_to_lua(&t->member,s); }
+#define LIGHT_WRAP_MEMBER_GET(type,member,name)  _##type##wrap::setters[name]=[](type *t,lua::state &s){ int dum=3;convert_from_lua(s,dum,t->member);return 0;}
 #define LIGHT_WRAP_MEMBER(type,member)  LIGHT_WRAP_MEMBER_SET(type,member,#member);LIGHT_WRAP_MEMBER_GET(type,member,#member);
 }
 #endif // LIGHTWEIGHT_H_INCLUDED

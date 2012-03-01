@@ -5,9 +5,9 @@ struct simple_struct
     int a,b;
     string c;
 
-    static simple_struct pullfromlua(lua::state &s,int &start)
+    static void pullfromlua(lua::state &s,int &start,simple_struct& t)
     {
-        simple_struct t;
+
         if(!s.is<lua::table>(start))
             throw lua::runtime_error("Incorrect argument, needs table");
         s.getfield("a");
@@ -20,7 +20,6 @@ struct simple_struct
         t.c=s.as<string>(-1);
         s.pop();
         start++;
-        return t;
     }
     int pushtolua(lua::state &s)
     {
@@ -74,9 +73,8 @@ int pushtolua<complex_struct>(complex_struct inp,lua::state &s)
     return 1;
 }
 template<>
-complex_struct pullfromlua<complex_struct>(lua::state &s,int &start)
+void pullfromlua<complex_struct>(lua::state &s,int &start,complex_struct &t)
 {
-    complex_struct t;
     if(!s.is<lua::table>(start))
         throw lua::runtime_error("Incorrect argument, needs table");
     s.getfield("a");
@@ -84,10 +82,10 @@ complex_struct pullfromlua<complex_struct>(lua::state &s,int &start)
     s.pop();
     s.getfield("b");
     int t_pos=s.gettop();
-    t.b=convert_from_lua<simple_struct>(s,t_pos);
+    convert_from_lua<simple_struct>(s,t_pos,t.b);
     s.pop();
     start++;
-    return t;
+
 }
 void arg_is_struct(simple_struct a)
 {
